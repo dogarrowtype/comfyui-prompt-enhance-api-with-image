@@ -14,13 +14,7 @@ A ComfyUI custom node that enhances and rewrites prompts using OpenAI-compatible
 
 ## Installation
 
-### Method 1: ComfyUI Manager (Recommended)
-
-1. Open ComfyUI Manager
-2. Search for "Prompt Enhance API with Image"
-3. Click Install
-
-### Method 2: Manual Installation
+### Manual Installation
 
 1. Navigate to your ComfyUI custom_nodes directory:
    ```bash
@@ -32,11 +26,7 @@ A ComfyUI custom node that enhances and rewrites prompts using OpenAI-compatible
    git clone https://github.com/yourusername/comfyui-prompt-enhance-api-with-image.git
    ```
 
-3. Install dependencies:
-   ```bash
-   cd comfyui-prompt-enhance-api-with-image
-   pip install -r requirements.txt
-   ```
+3. Install dependencies
 
 4. Restart ComfyUI
 
