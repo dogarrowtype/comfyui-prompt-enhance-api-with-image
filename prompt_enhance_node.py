@@ -47,6 +47,9 @@ class PromptEnhanceAPINode:
             },
             "optional": {
                 "image": ("IMAGE",),
+                "keep_alive": ("STRING", {
+                    "default": "0"  # Ollama only: "0" unloads immediately, or "5m", "1h", "-1" for indefinitely
+                }),
             }
         }
 
@@ -122,7 +125,7 @@ class PromptEnhanceAPINode:
 
         return img_base64
 
-    def enhance_prompt(self, api_mode, system_prompt, user_prompt, model, seed, image=None):
+    def enhance_prompt(self, api_mode, system_prompt, user_prompt, model, seed, image=None, keep_alive=None):
         """
         Enhance the prompt using OpenAI-compatible or Ollama native API.
 
@@ -133,6 +136,8 @@ class PromptEnhanceAPINode:
             model: Model name to use (e.g., "gpt-4o", "llama3.2-vision")
             seed: Random seed for caching control (changing seed forces re-execution)
             image: Optional image tensor from ComfyUI
+            keep_alive: Ollama only. How long to keep the model loaded ("0", "5m",
+                "1h", "-1"). Overrides the config.ini value when provided.
 
         Returns:
             Tuple containing the enhanced prompt string
@@ -141,7 +146,7 @@ class PromptEnhanceAPINode:
             raise ValueError("User prompt is empty and no image provided. Nothing to enhance.")
 
         if api_mode == "ollama":
-            return self._call_ollama_api(system_prompt, user_prompt, model, seed, image)
+            return self._call_ollama_api(system_prompt, user_prompt, model, seed, image, keep_alive)
         else:
             return self._call_openai_api(system_prompt, user_prompt, model, seed, image)
 
@@ -216,7 +221,7 @@ class PromptEnhanceAPINode:
                 api_endpoint,
                 headers=headers,
                 json=payload,
-                timeout=60
+                timeout=int(config.get("timeout", 60))
             )
 
             response.raise_for_status()
@@ -250,7 +255,7 @@ class PromptEnhanceAPINode:
             print(f"Error: {error_msg}")
             raise RuntimeError(error_msg) from e
 
-    def _call_ollama_api(self, system_prompt, user_prompt, model, seed, image=None):
+    def _call_ollama_api(self, system_prompt, user_prompt, model, seed, image=None, keep_alive=None):
         """Call Ollama native API."""
         # Get API configuration
         config = self.config.get("ollama", {})
@@ -282,8 +287,10 @@ class PromptEnhanceAPINode:
             "Content-Type": "application/json"
         }
 
-        # Parse keep_alive - can be a string like "5m" or a number
-        keep_alive = config.get("keep_alive", "0")
+        # Parse keep_alive - can be a string like "5m" or a number.
+        # The node input (if provided) takes precedence over config.ini.
+        if keep_alive is None or str(keep_alive).strip() == "":
+            keep_alive = config.get("keep_alive", "0")
         # Try to convert to int if it's a number string, otherwise keep as string
         try:
             keep_alive = int(keep_alive)
@@ -311,7 +318,7 @@ class PromptEnhanceAPINode:
                 api_endpoint,
                 headers=headers,
                 json=payload,
-                timeout=120  # Ollama can be slower, especially for vision models
+                timeout=int(config.get("timeout", 300))  # Ollama can be slow; configurable via [ollama] timeout
             )
 
             response.raise_for_status()
